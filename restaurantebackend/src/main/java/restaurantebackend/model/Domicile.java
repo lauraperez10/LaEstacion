@@ -1,5 +1,6 @@
 package restaurantebackend.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import javax.persistence.*;
@@ -16,10 +17,14 @@ public class Domicile {
     private int domicileId;
 
     @Column(name = "domicileDate")
+    @JsonFormat(pattern="dd-MM-yyyy HH:mm", timezone="GMT-5")
     private Date domicileDate;
 
     @Column(name = "domicileCost")
     private double domicileCost;
+
+    @Column(name = "domicileStatus")
+    private String domicileStatus;
 
     @OneToMany(mappedBy = "domicile")
     @JsonIgnore
@@ -31,6 +36,12 @@ public class Domicile {
 
     public Domicile() {
 
+    }
+
+    @PrePersist
+    public void prePersist() {
+        this.domicileDate = new Date();
+        this.domicileStatus = "Activo";
     }
 
     public int getDomicileId() {
@@ -55,6 +66,14 @@ public class Domicile {
 
     public void setDomicileCost(double domicileCost) {
         this.domicileCost = domicileCost;
+    }
+
+    public String getDomicileStatus() {
+        return domicileStatus;
+    }
+
+    public void setDomicileStatus(String domicileStatus) {
+        this.domicileStatus = domicileStatus;
     }
 
     public List<Order> getOrdersDetails() {

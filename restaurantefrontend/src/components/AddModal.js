@@ -1,13 +1,27 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import "./Modal.css";
 
-const EditModal = ({ data, type }) => {
-  const { register, handleSubmit } = useForm();
-  const [bookingResponse, setBookingResponse] = useState("")
+const AddModal = ({ type }) => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
   const [productResponse, setProductResponse] = useState("");
+  const [categories, setCategories] = useState([]);
 
-  async function updateProduct(dataForm) {
+  useEffect(() => {
+    async function fetchCategories() {
+      const response = await fetch(
+        `http://localhost:8080/category/showCategories`
+      );
+      const data = await response.json();
+      setCategories(data);
+    }
+    fetchCategories();
+  }, []);
+
+  async function createProduct(dataForm) {
     if (dataForm.productImage[0]) {
       const image = new FormData();
       image.append("file", dataForm.productImage[0]);
@@ -25,20 +39,30 @@ const EditModal = ({ data, type }) => {
       dataForm.productImage = "";
     }
 
+    console.log(dataForm);
+
+    dataForm.productCategory = categories.find((category) => {
+      return category.categoryId === parseInt(dataForm.productCategory);
+    });
+
+    console.log(dataForm);
+
     const update = {
-      productPrice: dataForm.productPrice,
+      productName: dataForm.productName,
+      productPrice: parseFloat(dataForm.productPrice),
       productImage: dataForm.productImage,
-      iva: dataForm.iva,
+      iva: parseFloat(dataForm.productIva),
       productDescription: dataForm.productDescription,
-      stock: dataForm.stock,
+      stock: parseInt(dataForm.productStock),
+      category: dataForm.productCategory,
     };
 
     console.log(update);
 
     const response = await fetch(
-      `http://localhost:8080/product/updateProduct/${data.productId}`,
+      `http://localhost:8080/product/createProduct/`,
       {
-        method: "PUT",
+        method: "POST",
         headers: {
           "Content-type": "application/json",
         },
@@ -49,35 +73,20 @@ const EditModal = ({ data, type }) => {
     setProductResponse(dataBack);
   }
 
-  async function updateBooking(dataForm) {
-    const response = await fetch(
-      `http://localhost:8080/booking/updateBooking/${data.bookingId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify(dataForm),
-      }
-    );
-    const dataBack = await response.text();
-    setBookingResponse(dataBack);
-  }
-
   return (
     <>
       {type === "product" && (
         <div
           className="modal fade"
-          id="editModal"
+          id="addModal"
           tabIndex="-1"
-          aria-labelledby="editModalLabel"
+          aria-labelledby="addModalLabel"
           aria-hidden="true"
         >
           <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Editar producto</h5>
+                <h5 className="modal-title">Agregar producto</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -86,7 +95,30 @@ const EditModal = ({ data, type }) => {
                 ></button>
               </div>
               <div className="modal-body">
-                <form className="row" onSubmit={handleSubmit(updateProduct)}>
+                <form
+                  className="row text-start"
+                  onSubmit={handleSubmit(createProduct)}
+                >
+                  <div className="col-6 p-3">
+                    <label
+                      htmlFor="productName"
+                      className="form-label fw-bolder"
+                    >
+                      Nombre del producto:
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control border-dark border-2"
+                      {...register("productName", {
+                        required: true,
+                      })}
+                    />
+                    {errors.productName?.type === "required" && (
+                      <div className="text-danger">
+                        <small>Este campo es requerido.</small>
+                      </div>
+                    )}
+                  </div>
                   <div className="col-6 p-3">
                     <label
                       htmlFor="productPrice"
@@ -97,9 +129,23 @@ const EditModal = ({ data, type }) => {
                     <input
                       type="text"
                       className="form-control border-dark border-2"
-                      defaultValue={data.productPrice}
-                      {...register("productPrice")}
+                      {...register("productPrice", {
+                        required: true,
+                        pattern: /^[0-9]+$/,
+                      })}
                     />
+                    {errors.productPrice?.type === "required" && (
+                      <div className="text-danger">
+                        <small>Este campo es requerido.</small>
+                      </div>
+                    )}
+                    {errors.productPrice?.type === "pattern" && (
+                      <div className="text-danger">
+                        <small>
+                          No se permiten letras ni caracteres especiales.
+                        </small>
+                      </div>
+                    )}
                   </div>
                   <div className="col-6 p-3">
                     <label htmlFor="formFile" className="form-label fw-bolder">
@@ -108,19 +154,43 @@ const EditModal = ({ data, type }) => {
                     <input
                       className="form-control border-dark border-2"
                       type="file"
-                      {...register("productImage")}
+                      {...register("productImage", {
+                        required: true,
+                      })}
                     ></input>
+                    {errors.productImage?.type === "required" && (
+                      <div className="text-danger">
+                        <small>Este campo es requerido.</small>
+                      </div>
+                    )}
                   </div>
                   <div className="col-6 p-3">
-                    <label htmlFor="iva" className="form-label fw-bolder">
+                    <label
+                      htmlFor="productIva"
+                      className="form-label fw-bolder"
+                    >
                       Iva producto:
                     </label>
                     <input
                       type="text"
                       className="form-control border-dark border-2"
-                      defaultValue={data.iva}
-                      {...register("iva")}
+                      {...register("productIva", {
+                        required: true,
+                        pattern: /^[0-9]+$/,
+                      })}
                     />
+                    {errors.productIva?.type === "required" && (
+                      <div className="text-danger">
+                        <small>Este campo es requerido.</small>
+                      </div>
+                    )}
+                    {errors.productIva?.type === "patter" && (
+                      <div className="text-danger">
+                        <small>
+                          No se permiten letras ni caracteres especiales.
+                        </small>
+                      </div>
+                    )}
                   </div>
                   <div className="col-6 p-3">
                     <label
@@ -132,9 +202,15 @@ const EditModal = ({ data, type }) => {
                     <input
                       type="text"
                       className="form-control border-dark border-2"
-                      defaultValue={data.productDescription}
-                      {...register("productDescription")}
+                      {...register("productDescription", {
+                        required: true,
+                      })}
                     />
+                    {errors.productDescription?.type === "required" && (
+                      <div className="text-danger">
+                        <small>Este campo es requerido.</small>
+                      </div>
+                    )}
                   </div>
                   <div className="col-6 p-3">
                     <label
@@ -146,124 +222,79 @@ const EditModal = ({ data, type }) => {
                     <input
                       type="text"
                       className="form-control border-dark border-2"
-                      defaultValue={data.stock}
-                      {...register("stock")}
+                      {...register("productStock", {
+                        required: true,
+                        pattern: /^[0-9]+$/,
+                      })}
                     />
-                  </div>
-                  <div className="modal-footer justify-content-center">
-                    <button
-                      type="submit"
-                      className="btn"
-                      style={{ background: "#0f020a", color: "white" }}
-                      data-bs-target="#confirmEditModal"
-                      data-bs-toggle="modal"
-                    >
-                      Guardar cambios
-                    </button>
-                    <button
-                      type="button"
-                      className="btn"
-                      style={{ background: "#0f020a", color: "white" }}
-                      data-bs-dismiss="modal"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {type === "booking" && (
-        <div
-          className="modal fade"
-          id="editModal"
-          tabIndex="-1"
-          aria-labelledby="editModalLabel"
-          aria-hidden="true"
-        >
-          <div className="modal-dialog modal-lg modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Editar reserva</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                ></button>
-              </div>
-              <div className="modal-body">
-                <form className="row" onSubmit={handleSubmit(updateBooking)}>
-                  <div className="col-12 p-3">
-                    <label htmlFor="bookingId" className="form-label fw-bolder">
-                      Id de la reserva:
-                    </label>
-                    <input
-                      className="form-control border-dark border-2"
-                      defaultValue={data.bookingId}
-                      disabled
-                    />
-                  </div>
-                  <div className="col-6 p-3">
-                    <label
-                      htmlFor="bookingDate"
-                      className="form-label fw-bolder"
-                    >
-                      Fecha de la reserva:
-                    </label>
-                    <div className="input-group date" data-provide="datepicker">
-                      <input
-                        type="text"
-                        className="form-control border-dark"
-                        data-date-format="mm/dd/yyyy"
-                        defaultValue={data.bookingDate}
-                        {...register("bookingDate")}
-                      />
-                      <div className="input-group-addon">
-                        <span className="glyphicon glyphicon-th"></span>
+                    {errors.productStock?.type === "required" && (
+                      <div className="text-danger">
+                        <small>Este campo es requerido.</small>
                       </div>
-                    </div>
+                    )}
+                    {errors.productStock?.type === "patter" && (
+                      <div className="text-danger">
+                        <small>
+                          No se permiten letras ni caracteres especiales.
+                        </small>
+                      </div>
+                    )}
                   </div>
                   <div className="col-6 p-3">
                     <label
-                      htmlFor="bookingHour"
+                      htmlFor="productCategory"
                       className="form-label fw-bolder"
                     >
-                      Hora:
+                      Categoria:
                     </label>
-                    <select
-                      className="form-select border-dark"
-                      autoComplete="nope"
-                      defaultValue={data.bookingHour}
-                      {...register("bookingHour", { required: true })}
-                    >
-                      <option value="13:00">13:00</option>
-                      <option value="14:00">14:00</option>
-                      <option value="15:00">15:00</option>
-                      <option value="16:00">16:00</option>
-                      <option value="17:00">17:00</option>
-                      <option value="18:00">18:00</option>
-                      <option value="19:00">19:00</option>
-                      <option value="20:00">20:00</option>
-                      <option value="21:00">21:00</option>
-                    </select>
+                    {categories.length !== 0 ? (
+                      <select
+                        className="form-select"
+                        aria-label="Default select example"
+                        {...register("productCategory", {
+                          required: true,
+                        })}
+                      >
+                        <option value={"No hay categorias para seleccionar."}>
+                          Seleccione la categoria
+                        </option>
+                        {categories.map(({ categoryId, categoryName }) => (
+                          <option value={categoryId} key={categoryId}>
+                            {categoryName}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        className="form-select"
+                        aria-label="Default select example"
+                        disabled
+                      >
+                        <option value={"No hay categorias para seleccionar."}>
+                          No hay categorias para seleccionar.
+                        </option>
+                      </select>
+                    )}
+                    {errors.productCategory?.type === "required" && (
+                      <div className="text-danger">
+                        <small>Este campo es requerido.</small>
+                      </div>
+                    )}
                   </div>
                   <div className="modal-footer justify-content-center">
                     <button
                       type="submit"
                       className="btn"
-                      style={{ background: "#0f020a", color: "white" }}
+                      style={{ background: "#0f020a", color: "#dad49c" }}
                       data-bs-target="#confirmEditModal"
                       data-bs-toggle="modal"
                     >
-                      Guardar cambios
+                      Crear producto
                     </button>
                     <button
                       type="button"
                       className="btn"
-                      style={{ background: "#0f020a", color: "white" }}
+                      style={{ background: "#0f020a", color: "#dad49c" }}
                       data-bs-dismiss="modal"
                     >
                       Cancelar
@@ -293,8 +324,7 @@ const EditModal = ({ data, type }) => {
               ></button>
             </div>
             <div className="modal-body">
-              {bookingResponse === "Booking update successfully" ||
-              productResponse === "Product update successfully" ? (
+              {productResponse === "Product create successfully" ? (
                 <>
                   <div className="f-modal-alert">
                     <div className="f-modal-icon f-modal-success animate">
@@ -305,7 +335,7 @@ const EditModal = ({ data, type }) => {
                     </div>
                   </div>
                   <p className="fs-4 fw-bolder text-center">
-                    Los cambios se guardaron correctamente.
+                    Producto creado correctamente.
                   </p>
                 </>
               ) : (
@@ -321,14 +351,13 @@ const EditModal = ({ data, type }) => {
                     </div>
                   </div>
                   <p className="fs-4 fw-bolder text-center">
-                    Error al guardar los cambios.
+                    Error al guardar el producto.
                   </p>
                 </>
               )}
             </div>
             <div className="modal-footer justify-content-center">
-              {bookingResponse === "Booking update successfully" ||
-              productResponse === "Product update successfully" ? (
+              {productResponse === "Product create successfully" ? (
                 <button
                   type="button"
                   className="btn"
@@ -343,7 +372,7 @@ const EditModal = ({ data, type }) => {
                   type="button"
                   className="btn"
                   style={{ background: "#0f020a", color: "white" }}
-                  data-bs-target="#editModal"
+                  data-bs-target="#addModal"
                   data-bs-toggle="modal"
                 >
                   Aceptar
@@ -357,4 +386,4 @@ const EditModal = ({ data, type }) => {
   );
 };
 
-export default EditModal;
+export default AddModal;
